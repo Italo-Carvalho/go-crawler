@@ -9,27 +9,32 @@ import (
 	"time"
 
 	"github.com/italo-carvalho/crowler/db"
+	"github.com/italo-carvalho/crowler/website"
 	"golang.org/x/net/html"
 )
 
-var link string
+var (
+	link   string
+	action string
+)
 
 func init() {
 	flag.StringVar(&link, "url", "https://aprendagolang.com.br", "init url crawler")
-
+	flag.StringVar(&action, "action", "website", "what service to start?")
 }
 
 func main() {
 	flag.Parse()
-	done := make(chan bool)
-	go visitLink(link)
-	<-done
-}
-
-type VisitedLink struct {
-	Website     string    `bson:"website"`
-	Link        string    `bson:"link"`
-	VisitedDate time.Time `bson:"visited_date"`
+	switch *&action {
+	case "website":
+		website.Run()
+	case "crawler":
+		done := make(chan bool)
+		go visitLink(link)
+		<-done
+	default:
+		fmt.Printf("unknown action: '%s'", action)
+	}
 }
 
 func visitLink(link string) {
@@ -66,12 +71,12 @@ func extractLinks(node *html.Node) {
 				continue
 			}
 
-			if db.VisitedLInk(link.String()) {
+			if db.CheckVisitedLink(link.String()) {
 				fmt.Printf("link is already visited: %s \n", link)
 				continue
 			}
 
-			visitedLink := VisitedLink{
+			visitedLink := db.VisitedLink{
 				Website:     link.Host,
 				Link:        link.String(),
 				VisitedDate: time.Now(),
